@@ -1,0 +1,8 @@
+fastapi==0.115.12
+langchain==0.3.25
+langchain_community==0.3.24
+openai==1.81.0
+pdfminer==20191125
+pydantic==2.11.4
+scidownl==1.0.2
+uvicorn==0.34.2
