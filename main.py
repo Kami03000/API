@@ -125,7 +125,7 @@ def get_summary(doc_objs, openai_api_key: str):
 
     # Define LLM chain
     llm = ChatOpenAI(temperature=0, model_name="gpt-4o-mini", openai_api_key=openai_api_key)
-    llm_chain = LLMChain(llm=llm, prompt=prompt)
+    llm_chain = LLMChain(llm=llm, prompt=prompt_template)
 
     # Define StuffDocumentsChain
     stuff_chain = StuffDocumentsChain(llm_chain=llm_chain, document_variable_name="text")
