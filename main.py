@@ -12,9 +12,9 @@ from langchain.prompts import PromptTemplate
 from langchain_community.chat_models import ChatOpenAI
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains.llm import LLMChain
-from openai import OpenAI
 import base64
-
+import logging
+from openai import OpenAI
 import asyncio
 import os, time, glob
 import re
@@ -22,15 +22,20 @@ import logging
 
 # Initialize FastAPI app
 app = FastAPI()
+
+# Ensure 'downloads' directory exists before mounting
+os.makedirs("downloads", exist_ok=True)
 app.mount("/downloads", StaticFiles(directory="downloads"), name="downloads")
 
+os.makedirs("images", exist_ok=True)
+app.mount("/images", StaticFiles(directory="images"), name="images")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://www.kmizeolite.com"],  # Allow all origins for testing
+    allow_origins=["https://www.kmizeolite.com"],  # Allow only your frontend
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers,
 )
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -102,16 +107,24 @@ def process_pdf(pdf_file):
 def get_summary(doc_objs, openai_api_key: str):
     # Define prompt
     prompt_template = """Please analyze the following text and provide the following details:
-                        1.Clearly identify and state the title of the article or chapter.
-                        2. Write a detailed, comprehensive, and coherent summary that thoroughly captures the main points, key insights, supporting details, and any critical arguments presented in the text. The summary should ensure no significant information is missed and should be proportionate to the text length.
-                        3. Explain the relevance and significance of the article, including its importance to its field or topic, how it contributes to ongoing discussions, and the benefits it offers to readers.
-                        4. Extract keywords if keywords of the text.
-                        Analyze the following text \n {text}:
-                        CONCISE SUMMARY:"""
-    prompt = PromptTemplate.from_template(prompt_template)
+                    1. Clearly identify and state the title of the article or chapter.
+                    2. Write a detailed, comprehensive, and coherent summary that thoroughly captures the main points, key insights, supporting details, and any critical arguments presented in the text. The summary should ensure no significant information is missed and should be proportionate to the text length.
+                    3. Select the most relevant category from this list: ['Old & Outdated', 'Warm Mix Asphalt', 'Home Use', 'Agriculture', 'Heavy Metals', 'Surface Modified Zeolite SMZ', 'Biochar + Zeo Reseach', 'Aquaculture', 'Natural Zeolite', 'Soil Treatment', 'Compost', 'Environmental Remediation', 'Graphs & Charts', 'Vacuum Insulated Panel', 'Honeybee Feed Additive', 'Absorbents & Reclamation', 'Human Consumption', 'Seeds & Germination', 'Animal Feed', 'Anaerobic Digestion', 'Dietary Use', 'Paint + Coatings', 'Acid Treatment', 'Zeolite_General Information', 'Fire retardant', 'Swine Wastewater', 'Traction Control', 'Synthetic Turf Infill', 'Cation Exchange', 'Walnut Abscission', 'Cement + Concrete', 'Hydroponics', 'Water Filtration', 'Odor Control']. 
+                       Provide a brief justification for your category selection.
+                    4. Explain the relevance and significance of the article, including its importance to its field or topic, how it contributes to ongoing discussions, and the benefits it offers to readers.
+                    5. Extract keywords from the text.
+                    
+                    Analyze the following text: \n{text}
+                    
+                    CONCISE OUTPUT FORMAT:
+                    Title: [identified title]
+                    Summary: [detailed summary]
+                    Selected Category: [chosen category with justification]
+                    Relevance: [significance explanation]
+                    Keywords: [comma-separated keywords]"""
 
     # Define LLM chain
-    llm = ChatOpenAI(temperature=0, model_name="gpt-4", openai_api_key=openai_api_key)
+    llm = ChatOpenAI(temperature=0, model_name="gpt-4o-mini", openai_api_key=openai_api_key)
     llm_chain = LLMChain(llm=llm, prompt=prompt)
 
     # Define StuffDocumentsChain
@@ -121,6 +134,9 @@ def get_summary(doc_objs, openai_api_key: str):
 
 @app.post("/download/")
 async def download(request: Request):
+    files = os.listdir('downloads/')
+    for f in files:
+        os.remove('downloads/'+f)
     try:
         data = await request.json()
         doi = data.get("doi")
@@ -143,8 +159,7 @@ async def download(request: Request):
     except Exception as e:
         logging.error(f"Error downloading paper: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
+    
 @app.post("/upload-pdf/")
 async def upload_pdf(
     file: UploadFile = File(..., max_size=10_000_000),  # 10 MB limit
@@ -172,36 +187,56 @@ async def upload_pdf(
     except Exception as e:
         logging.error(f"Error processing file: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 @app.post("/generate-image/")
 async def generate_image(
     openai_api_key: str = Form(...),
-    prompt: str = Form(...)
+    save_path: str = Form(...),  # Full path where image should be saved
+    title: str = Form(...)      # Title for the image filename
 ):
     try:
-        # client = OpenAI()
-        client = OpenAI(api_key=openai_api_key)
+        files = os.listdir('images/')
+        for f in files:
+            os.remove('images/'+f)
+            
+        # Generate filename (sanitize title and add timestamp)
+        import re
+        from datetime import datetime
+        clean_title = re.sub(r'[^\w\-_]', '_', title)[:50]  # Sanitize and truncate
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}.png"
+        full_path = os.path.join(save_path, filename)
 
+        # Initialize OpenAI client
+        client = OpenAI(api_key=openai_api_key)
+        prompt = "Create a simple and natural image inspired by the title '{title}', but ensure there is no text or overlapping text on the image."
+        # Generate image
         result = client.images.generate(
-            model="dall-e-2",  # or "gpt-image-1" if available to your API key
+            model="dall-e-2",
             prompt=prompt,
             response_format="b64_json",
             n=1,
             size="1024x1024"
         )
 
-        image_base64 = result.data[0].b64_json
+        # Decode and save image
+        image_data = base64.b64decode(result.data[0].b64_json)
+        with open(full_path, 'wb') as f:
+            f.write(image_data)
 
         return JSONResponse(content={
-            "message": "Image generated successfully",
-            "image_base64": image_base64
+            "message": "Image generated and saved successfully",
+            "path": full_path,
+            "filename": filename
         })
 
     except Exception as e:
         logging.error(f"Image generation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
 # Run the application
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8282)
