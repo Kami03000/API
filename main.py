@@ -107,21 +107,13 @@ def process_pdf(pdf_file):
 def get_summary(doc_objs, openai_api_key: str):
     # Define prompt
     prompt_template = """Please analyze the following text and provide the following details:
-                    1. Clearly identify and state the title of the article or chapter.
-                    2. Write a detailed, comprehensive, and coherent summary that thoroughly captures the main points, key insights, supporting details, and any critical arguments presented in the text. The summary should ensure no significant information is missed and should be proportionate to the text length.
-                    3. Select the most relevant category from this list: ['Old & Outdated', 'Warm Mix Asphalt', 'Home Use', 'Agriculture', 'Heavy Metals', 'Surface Modified Zeolite SMZ', 'Biochar + Zeo Reseach', 'Aquaculture', 'Natural Zeolite', 'Soil Treatment', 'Compost', 'Environmental Remediation', 'Graphs & Charts', 'Vacuum Insulated Panel', 'Honeybee Feed Additive', 'Absorbents & Reclamation', 'Human Consumption', 'Seeds & Germination', 'Animal Feed', 'Anaerobic Digestion', 'Dietary Use', 'Paint + Coatings', 'Acid Treatment', 'Zeolite_General Information', 'Fire retardant', 'Swine Wastewater', 'Traction Control', 'Synthetic Turf Infill', 'Cation Exchange', 'Walnut Abscission', 'Cement + Concrete', 'Hydroponics', 'Water Filtration', 'Odor Control']. 
-                       Provide a brief justification for your category selection.
-                    4. Explain the relevance and significance of the article, including its importance to its field or topic, how it contributes to ongoing discussions, and the benefits it offers to readers.
-                    5. Extract keywords from the text.
-                    
-                    Analyze the following text: \n{text}
-                    
-                    CONCISE OUTPUT FORMAT:
-                    Title: [identified title]
-                    Summary: [detailed summary]
-                    Selected Category: [chosen category with justification]
-                    Relevance: [significance explanation]
-                    Keywords: [comma-separated keywords]"""
+    1.Clearly identify and state the title of the article or chapter.
+    2. Write a detailed, comprehensive, and coherent summary that thoroughly captures the main points, key insights, supporting details, and any critical arguments presented in the text. The summary should ensure no significant information is missed and should be proportionate to the text length.
+    3. Explain the relevance and significance of the article, including its importance to its field or topic, how it contributes to ongoing discussions, and the benefits it offers to readers.
+    4. Extract keywords if keywords of the text.
+    Analyze the following text \n {text}:
+    CONCISE SUMMARY:"""
+
 
     # Define LLM chain
     llm = ChatOpenAI(temperature=0, model_name="gpt-4o-mini", openai_api_key=openai_api_key)
