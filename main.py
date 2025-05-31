@@ -15,7 +15,7 @@ import base64
 import logging
 from openai import OpenAI
 import asyncio
-import os
+import os, glob
 import re
 from datetime import datetime
 
