@@ -104,6 +104,19 @@ def process_pdf(pdf_file):
     documents = [Document(page_content=page, metadata=metadata) for page in text_pages]
     return documents
 
+
+def is_scanned_pdf(file_path: str) -> bool:
+    """
+    Returns True if no extractable text is found in the PDF (likely scanned).
+    """
+    try:
+        text = extract_text(file_path)
+        return not text.strip()  # True if no text
+    except Exception as e:
+        logging.error(f"Error checking PDF text content: {e}")
+        raise
+
+
 def get_summary(doc_objs, openai_api_key: str):
     # Define prompt
     prompt_template = """Please analyze the following text and provide the following details:
@@ -154,7 +167,7 @@ async def download(request: Request):
     
 @app.post("/upload-pdf/")
 async def upload_pdf(
-    file: UploadFile = File(..., max_size=10_000_000),  # 10 MB limit
+    file: UploadFile = File(..., max_size=20_000_000),  # 10 MB limit
     openai_api_key: str = Form(...)  # Accept the API key in the request body
 ):
     try:
@@ -165,6 +178,12 @@ async def upload_pdf(
         with open(file_path, "wb") as buffer:
             buffer.write(await file.read())
         logging.debug(f"File saved to: {file_path}")
+
+         # Check if the PDF is scanned (no extractable text)
+        if is_scanned_pdf(file_path):
+            os.remove(file_path)
+            raise HTTPException(status_code=500, detail="Scanned PDF detected. Please upload an editable (text-based) PDF.")
+
         
         # Process the PDF
         documents = process_pdf(file_path)
