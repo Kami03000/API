@@ -9,3 +9,8 @@ pydantic==2.10.6
 Requests==2.32.3
 uvicorn==0.34.0
 scidownl
+uvicorn[standard]
+python-multipart
+aiofiles
+requests
+starlette
