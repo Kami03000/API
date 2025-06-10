@@ -128,7 +128,7 @@ def is_scanned_pdf(file_path: str) -> bool:
 def get_summary(doc_objs, openai_api_key: str):
     # Define prompt
     prompt_template = """Please analyze the following text and provide the following details:
-                        1.Clearly identify and state the title of the article or chapter.
+                        1.Extract the main title of the article or chapter only. Ignore any surrounding or unrelated words.
                         2. Write a detailed, comprehensive, and coherent summary that thoroughly captures the main points, key insights, supporting details, and any critical arguments presented in the text. The summary should ensure no significant information is missed and should be proportionate to the text length.
                         3. Explain the relevance and significance of the article, including its importance to its field or topic, how it contributes to ongoing discussions, and the benefits it offers to readers.
                         4. Extract keywords if keywords of the text.
