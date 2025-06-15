@@ -127,13 +127,27 @@ def is_scanned_pdf(file_path: str) -> bool:
 
 def get_summary(doc_objs, openai_api_key: str):
     # Define prompt
-    prompt_template = """Please analyze the following text and provide the following details:
-                        1.Extract the main title of the article or chapter only. Ignore any surrounding or unrelated words.
-                        2. Write a detailed, comprehensive, and coherent summary that thoroughly captures the main points, key insights, supporting details, and any critical arguments presented in the text. The summary should ensure no significant information is missed and should be proportionate to the text length.
-                        3. Explain the relevance and significance of the article, including its importance to its field or topic, how it contributes to ongoing discussions, and the benefits it offers to readers.
-                        4. Extract keywords if keywords of the text.
-                        Analyze the following text \n {text}:
-                        CONCISE SUMMARY:"""
+    prompt_template = """Please analyze the following text and return a structured response in this exact format:
+
+                    ### 1. Main Title
+                    <Only the main title of the article, without extra description or formatting>
+                    
+                    ### 2. Summary
+                    <A detailed and coherent summary that includes main points, key insights, supporting evidence, results, and critical arguments, written in full paragraphs>
+                    
+                    ### 3. Relevance and Significance
+                    <Explain why this article matters, its contribution to the field, potential impact, and who would benefit from it>
+                    
+                    ### 4. Keywords
+                    - <keyword1>
+                    - <keyword2>
+                    - <keyword3>
+                    ...
+                    
+                    Analyze the following text:
+                    {text}
+                    """
+                    
     prompt = PromptTemplate.from_template(prompt_template)
 
     # Define LLM chain
